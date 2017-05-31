@@ -20,7 +20,7 @@ network --bootproto=dhcp
 
 # Use network installation
 url --url=http://olcentwe.cloudapp.net/openlogic/6.8/openlogic/x86_64/
-repo --name="CentOS-Updates" --baseurl=http://olcentgbl.trafficmanager.net/centos/6.8/updates/x86_64/
+repo --name="CentOS-Updates" --baseurl=http://olcentwe.cloudapp.net/centos/6.8/updates/x86_64/
 
 # Root password
 rootpw --plaintext "to_be_disabled"
@@ -44,7 +44,7 @@ part / --fstype="ext4" --size=1 --grow --asprimary
 bootloader --location=mbr --append="numa=off console=ttyS0,115200n8 earlyprintk=ttyS0,115200 rootdelay=300" --timeout=1
 
 # Add OpenLogic repo
-repo --name=openlogic --baseurl=http://olcentgbl.trafficmanager.net/openlogic/6/openlogic/x86_64/
+repo --name=openlogic --baseurl=http://olcentwe.cloudapp.net/openlogic/6.8/openlogic/x86_64/
 
 # Firewall configuration
 firewall --disabled
