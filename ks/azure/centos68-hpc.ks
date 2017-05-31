@@ -19,8 +19,8 @@ lang en_US.UTF-8
 network --bootproto=dhcp
 
 # Use network installation
-url --url=http://olcentwe.cloudapp.net/openlogic/6.8/openlogic/x86_64/
-repo --name="CentOS-Updates" --baseurl=-url --url=http://olcentgbl.trafficmanager.net/centos/6.8/os/x86_64/
+url --url=http://olcentgbl.trafficmanager.net/centos/6.8/os/x86_64/
+repo --name="CentOS-Updates" --baseurl=-url --url=http://olcentgbl.trafficmanager.net/centos/6.8/updates/x86_64/
 
 # Root password
 rootpw --plaintext "to_be_disabled"
