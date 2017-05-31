@@ -19,7 +19,7 @@ lang en_US.UTF-8
 network --bootproto=dhcp
 
 # Use network installation
-url --url=http://olcentgbl.trafficmanager.net/centos/6.8/os/x86_64/
+url --url=http://olcentwe.cloudapp.net/openlogic/6.8/openlogic/x86_64/
 repo --name="CentOS-Updates" --baseurl=http://olcentgbl.trafficmanager.net/centos/6.8/updates/x86_64/
 
 # Root password
@@ -177,7 +177,7 @@ EOF
 # Install Intel MPI
 MPI="l_mpi-rt_2017.2.174"
 CFG="IntelMPI-silent.cfg"
-curl -so /tmp/${MPI}.tgz http://192.168.40.171/azure/${MPI}.tgz  ## Internal link to MPI package
+curl -so /tmp/${MPI}.tgz http://olcentwe.cloudapp.net/openlogic/6.5/${MPI}.tgz  ## Internal link to MPI package
 curl -so /tmp/${CFG} https://raw.githubusercontent.com/szarkos/AzureBuildCentOS/master/config/azure/${CFG}
 tar -C /tmp -zxf /tmp/${MPI}.tgz
 /tmp/${MPI}/install.sh --silent /tmp/${CFG}
