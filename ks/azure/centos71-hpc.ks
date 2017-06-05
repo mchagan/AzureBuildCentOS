@@ -44,7 +44,7 @@ part / --fstype="ext4" --size=1 --grow --asprimary
 bootloader --location=mbr --timeout=1
 
 # Add OpenLogic repo
-repo --name=openlogic --baseurl=http://olcentWE.trafficmanager.net/openlogic/7.2.1511/openlogic/x86_64/
+repo --name=openlogic --baseurl=http://olcentwe.trafficmanager.net/openlogic/7.1.1503/openlogic/x86_64/
 
 # Firewall configuration
 firewall --disabled
