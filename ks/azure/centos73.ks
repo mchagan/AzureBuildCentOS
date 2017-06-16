@@ -26,7 +26,7 @@ repo --name="CentOS-Updates" --baseurl=http://olcentgbl.trafficmanager.net/cento
 rootpw --plaintext "to_be_disabled"
 
 # System services
-services --enabled="sshd,waagent,dnsmasq,NetworkManager"
+services --enabled="azure-repo-svc,azure-repo-svc.path,sshd,waagent,dnsmasq,NetworkManager"
 
 # System timezone
 timezone Etc/UTC --isUtc
@@ -73,6 +73,7 @@ python-pyasn1
 parted
 WALinuxAgent
 hypervkvpd
+azure-repo-svc
 -dracut-config-rescue
 
 %end
