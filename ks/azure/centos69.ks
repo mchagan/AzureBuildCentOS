@@ -44,7 +44,7 @@ part / --fstype="ext4" --size=1 --grow --asprimary
 bootloader --location=mbr --append="console=ttyS0,115200n8 earlyprintk=ttyS0,115200 rootdelay=300" --timeout=1
 
 # Add OpenLogic repo
-repo --name=openlogic --baseurl=http://olcentgbl.trafficmanager.net/openlogic/6/openlogic/x86_64/
+repo --name=openlogic --baseurl=http://olcentscus.cloudapp.net/openlogic/6/openlogic/x86_64/
 
 # Firewall configuration
 firewall --disabled
@@ -145,6 +145,7 @@ chkconfig cups off
 
 # turn on azure-repo-svc to detech whether Azure Cloud or Azure Stack on boot time
 chkconfig azure-repo-svc on
+service azure-repo-svc start
 
 # Deprovision and prepare for Azure
 /usr/sbin/waagent -force -deprovision
