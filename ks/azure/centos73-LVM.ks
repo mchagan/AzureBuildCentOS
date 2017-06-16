@@ -1,4 +1,4 @@
-# Kickstart for provisioning a RHEL 7.2 Azure HPC VM
+# Kickstart for provisioning a RHEL 7.3 Azure VM with LVM
 
 # System authorization information
 auth --enableshadow --passalgo=sha512
@@ -19,8 +19,8 @@ lang en_US.UTF-8
 network --bootproto=dhcp
 
 # Use network installation
-url --url=http://olcentgbl.trafficmanager.net/centos/7.2.1511/os/x86_64/
-repo --name="CentOS-Updates" --baseurl=http://olcentgbl.trafficmanager.net/centos/7.2.1511/updates/x86_64/
+url --url=http://olcentgbl.trafficmanager.net/centos/7.3.1611/os/x86_64/
+repo --name="CentOS-Updates" --baseurl=http://olcentgbl.trafficmanager.net/centos/7.3.1611/updates/x86_64/
 
 # Root password
 rootpw --plaintext "to_be_disabled"
@@ -38,10 +38,17 @@ clearpart --all --initlabel
 zerombr
 
 # Disk partitioning information
-part / --fstype="ext4" --size=1 --grow --asprimary
+part /boot --fstype xfs --size=1024
+part pv.01 --fstype="lvmpv" --size=1000 --grow
+volgroup rootvg pv.01
+logvol / --vgname=rootvg --fstype=xfs --size=6144 --name=rootlv
+logvol /var --vgname=rootvg --fstype=xfs --size=8192 --name=varlv
+logvol /tmp --vgname=rootvg --fstype=xfs --size=2048 --name=tmplv
+logvol /home --vgname=rootvg --fstype=xfs --size=1024 --name=homelv
+logvol /usr --vgname=rootvg --fstype=xfs --size=10240 --name=usrlv
 
 # System bootloader configuration
-bootloader --location=mbr
+bootloader --location=mbr --timeout=1
 
 # Add OpenLogic repo
 repo --name=openlogic --baseurl=http://olcentgbl.trafficmanager.net/openlogic/7/openlogic/x86_64/
@@ -65,21 +72,13 @@ poweroff
 %packages
 @base
 @console-internet
-ntp
+chrony
 cifs-utils
 sudo
 python-pyasn1
 parted
 WALinuxAgent
-msft-rdma-drivers
-selinux-policy-devel
-rdma
-librdmacm
-libmlx4
-dapl
-libibverbs
-kernel-headers
--hypervkvpd
+hypervkvpd
 -dracut-config-rescue
 
 %end
@@ -100,6 +99,9 @@ curl -so /etc/pki/rpm-gpg/OpenLogic-GPG-KEY https://raw.githubusercontent.com/sz
 rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
 rpm --import /etc/pki/rpm-gpg/OpenLogic-GPG-KEY
 
+# Modify yum
+echo "http_caching=packages" >> /etc/yum.conf
+
 # Set the kernel cmdline
 sed -i 's/^\(GRUB_CMDLINE_LINUX\)=".*"$/\1="console=tty1 console=ttyS0,115200n8 earlyprintk=ttyS0,115200 rootdelay=300 net.ifnames=0"/g' /etc/default/grub
 
@@ -118,6 +120,7 @@ TYPE=Ethernet
 USERCTL=no
 PEERDNS=yes
 IPV6INIT=no
+NM_CONTROLLED=no
 EOF
 
 cat << EOF > /etc/sysconfig/network
@@ -125,65 +128,41 @@ NETWORKING=yes
 HOSTNAME=localhost.localdomain
 EOF
 
+# Deploy new configuration
+cat <<EOF > /etc/pam.d/system-auth-ac
+
+auth        required      pam_env.so
+auth        sufficient    pam_fprintd.so
+auth        sufficient    pam_unix.so nullok try_first_pass
+auth        requisite     pam_succeed_if.so uid >= 1000 quiet_success
+auth        required      pam_deny.so
+
+account     required      pam_unix.so
+account     sufficient    pam_localuser.so
+account     sufficient    pam_succeed_if.so uid < 1000 quiet
+account     required      pam_permit.so
+
+password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type= ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1
+password    sufficient    pam_unix.so sha512 shadow nullok try_first_pass use_authtok remember=5
+password    required      pam_deny.so
+
+session     optional      pam_keyinit.so revoke
+session     required      pam_limits.so
+-session     optional      pam_systemd.so
+session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
+session     required      pam_unix.so
+
+EOF
+
 # Disable persistent net rules
 touch /etc/udev/rules.d/75-persistent-net-generator.rules
-rm -f /etc/udev/rules.d/70-persistent-net.rules
+rm -f /lib/udev/rules.d/75-persistent-net-generator.rules /etc/udev/rules.d/70-persistent-net.rules 2>/dev/null
 
-# Disable some unneeded services by default
-systemctl disable wpa_supplicant
+# Disable some unneeded services by default (administrators can re-enable if desired)
 systemctl disable abrtd
-
-# Enable RDMA driver
-
-  ## Install LIS4.1 with RDMA drivers
-  cd /opt/microsoft/rdma/rhel72
-  rpm -i kmod-microsoft-hyper-v-rdma-*.x86_64.rpm
-  rpm -i microsoft-hyper-v-rdma-*.x86_64.rpm
-  rm -f /initramfs-3.10.0-327.18.2.el7.x86_64.img
-  rm -f /boot/initramfs-3.10.0-327.el7.x86_64.img
-  echo -e "\nexclude=kernel*\n" >> /etc/yum.conf
-
-  sed -i 's/# OS.EnableRDMA=y/OS.EnableRDMA=y/' /etc/waagent.conf
-  systemctl enable hv_kvp_daemon.service
-
-# Need to increase max locked memory
-echo -e "\n# Increase max locked memory for RDMA workloads" >> /etc/security/limits.conf
-echo '* soft memlock unlimited' >> /etc/security/limits.conf
-echo '* hard memlock unlimited' >> /etc/security/limits.conf
-
-# NetworkManager should ignore RDMA interface
-cat << EOF > /etc/sysconfig/network-scripts/ifcfg-eth1
-DEVICE=eth1
-ONBOOT=no
-NM_CONTROLLED=no 
-EOF
-
-# Install Intel MPI
-MPI="l_mpi-rt_p_5.1.3.181"
-CFG="IntelMPI-silent.cfg"
-curl -so /tmp/${MPI}.tgz http://192.168.40.171/azure/${MPI}.tgz  ## Internal link to MPI package
-curl -so /tmp/${CFG} https://raw.githubusercontent.com/szarkos/AzureBuildCentOS/master/config/azure/${CFG}
-tar -C /tmp -zxf /tmp/${MPI}.tgz
-/tmp/${MPI}/install.sh --silent /tmp/${CFG}
-rm -rf /tmp/${MPI}* /tmp/${CFG}
-
-# Fix SELinux for Hyper-V daemons
-cat << EOF > /usr/share/selinux/devel/hyperv-daemons.te
-module hyperv-daemons 1.0;
-require {
-type hypervkvp_t;
-type device_t;
-type hypervvssd_t;
-class chr_file { read write open };
-}
-allow hypervkvp_t device_t:chr_file { read write open };
-allow hypervvssd_t device_t:chr_file { read write open };
-EOF
-cd /usr/share/selinux/devel
-make -f /usr/share/selinux/devel/Makefile hyperv-daemons.pp
-semodule -s targeted -i hyperv-daemons.pp
 
 # Deprovision and prepare for Azure
 /usr/sbin/waagent -force -deprovision
+rm -f /etc/resolv.conf 2>/dev/null # workaround old agent bug
 
 %end

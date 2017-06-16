@@ -1,4 +1,4 @@
-# Kickstart for provisioning a RHEL 6.5 Azure VM
+# Kickstart for provisioning a RHEL 6.8 Azure VM with LVM
 
 # System authorization information
 auth --enableshadow --passalgo=sha512
@@ -19,8 +19,8 @@ lang en_US.UTF-8
 network --bootproto=dhcp
 
 # Use network installation
-url --url=http://vault.centos.org/6.5/os/x86_64/
-repo --name="CentOS-Updates" --baseurl=http://vault.centos.org/6.5/updates/x86_64/
+url --url=http://olcentgbl.trafficmanager.net/centos/6.8/os/x86_64/
+repo --name="CentOS-Updates" --baseurl=http://olcentgbl.trafficmanager.net/centos/6.8/updates/x86_64/
 
 # Root password
 rootpw --plaintext "to_be_disabled"
@@ -38,10 +38,17 @@ clearpart --all --initlabel
 zerombr
 
 # Disk partitioning information
-part / --fstype="ext4" --size=1 --grow --asprimary
+part /boot --fstype ext4 --size=1024
+part pv.01 --fstype="lvmpv" --size=1000 --grow
+volgroup rootvg pv.01
+logvol / --vgname=rootvg --fstype=ext4 --size=6144 --name=rootlv
+logvol /var --vgname=rootvg --fstype=ext4 --size=8192 --name=varlv
+logvol /tmp --vgname=rootvg --fstype=ext4 --size=2048 --name=tmplv
+logvol /home --vgname=rootvg --fstype=ext4 --size=1024 --name=homelv
+logvol /usr --vgname=rootvg --fstype=ext4 --size=10240 --name=usrlv
 
 # System bootloader configuration
-bootloader --location=mbr --append="numa=off console=ttyS0,115200n8 earlyprintk=ttyS0,115200 rootdelay=300" --timeout=1
+bootloader --location=mbr --append="console=ttyS0,115200n8 earlyprintk=ttyS0,115200 rootdelay=300" --timeout=1
 
 # Add OpenLogic repo
 repo --name=openlogic --baseurl=http://olcentgbl.trafficmanager.net/openlogic/6/openlogic/x86_64/
@@ -90,13 +97,14 @@ WALinuxAgent
 usermod root -p '!!'
 
 # Remove unneeded parameters in grub
+sed -i 's/ numa=off//g' /boot/grub/grub.conf
 sed -i 's/ rhgb//g' /boot/grub/grub.conf
 sed -i 's/ quiet//g' /boot/grub/grub.conf
 sed -i 's/ crashkernel=auto//g' /boot/grub/grub.conf
 
 # Set OL repos
-curl -so /etc/yum.repos.d/CentOS-Base.repo https://raw.githubusercontent.com/szarkos/AzureBuildCentOS/master/config/mooncake/CentOS-Base.repo
-curl -so /etc/yum.repos.d/OpenLogic.repo https://raw.githubusercontent.com/szarkos/AzureBuildCentOS/master/config/mooncake/OpenLogic.repo
+curl -so /etc/yum.repos.d/CentOS-Base.repo https://raw.githubusercontent.com/szarkos/AzureBuildCentOS/master/config/azure/CentOS-Base.repo
+curl -so /etc/yum.repos.d/OpenLogic.repo https://raw.githubusercontent.com/szarkos/AzureBuildCentOS/master/config/azure/OpenLogic.repo
 
 # Import CentOS and OpenLogic public keys
 curl -so /etc/pki/rpm-gpg/OpenLogic-GPG-KEY https://raw.githubusercontent.com/szarkos/AzureBuildCentOS/master/config/OpenLogic-GPG-KEY
@@ -108,6 +116,9 @@ echo "http_caching=packages" >> /etc/yum.conf
 
 # Enable SSH keepalive
 sed -i 's/^#\(ClientAliveInterval\).*$/\1 180/g' /etc/ssh/sshd_config
+
+# Changing password retrictions defined by CIS CentOS Linux 6 Benchmark
+sudo sed -i 's/pam_cracklib.so try_first_pass retry=3 type=/\pam_cracklib.so try_first_pass retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1/g' /etc/pam.d/system-auth
 
 # Configure network
 cat << EOF > /etc/sysconfig/network-scripts/ifcfg-eth0
@@ -131,6 +142,12 @@ rm -f /lib/udev/rules.d/75-persistent-net-generator.rules /etc/udev/rules.d/70-p
 
 # Disable some unneeded services by default (administrators can re-enable if desired)
 chkconfig cups off
+
+# TEMPORARY - Install the Azure Linux agent
+#curl -so /root/WALinuxAgent-2.1.3-1.noarch.rpm https://raw.githubusercontent.com/szarkos/AzureBuildCentOS/master/rpm/6/WALinuxAgent-2.1.3-1.noarch.rpm
+#rpm -i /root/WALinuxAgent-2.1.3-1.noarch.rpm
+#rm -f /root/WALinuxAgent-2.1.3-1.noarch.rpm
+#chkconfig waagent on
 
 # Deprovision and prepare for Azure
 /usr/sbin/waagent -force -deprovision

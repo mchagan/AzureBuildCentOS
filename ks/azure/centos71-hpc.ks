@@ -41,7 +41,7 @@ zerombr
 part / --fstype="ext4" --size=1 --grow --asprimary
 
 # System bootloader configuration
-bootloader --location=mbr
+bootloader --location=mbr --timeout=1
 
 # Add OpenLogic repo
 repo --name=openlogic --baseurl=http://olcentgbl.trafficmanager.net/openlogic/7/openlogic/x86_64/
@@ -79,6 +79,7 @@ libmlx4
 dapl
 libibverbs
 kernel-headers
+kernel-devel
 -hypervkvpd
 -dracut-config-rescue
 
@@ -136,15 +137,21 @@ systemctl disable abrtd
 # Enable RDMA driver
 
   ## Install LIS4.1 with RDMA drivers
+  ND="142"
   cd /opt/microsoft/rdma/rhel71
-  rpm -i kmod-microsoft-hyper-v-rdma-*.x86_64.rpm
-  rpm -i microsoft-hyper-v-rdma-*.x86_64.rpm
+  rpm -i --nopre microsoft-hyper-v-rdma-*.${ND}-*.x86_64.rpm \
+                 kmod-microsoft-hyper-v-rdma-*.${ND}-*.x86_64.rpm
   rm -f /initramfs-3.10.0-229.el7.x86_64.img
   rm -f /boot/initramfs-3.10.0-229.el7.x86_64.img
   echo -e "\nexclude=kernel*\n" >> /etc/yum.conf
 
-  sed -i 's/OS.UpdateRdmaDriver=n/OS.UpdateRdmaDriver=y/' /etc/waagent.conf
-  sed -i 's/OS.CheckRdmaDriver=n/OS.CheckRdmaDriver=y/' /etc/waagent.conf
+  ## WALinuxAgent 2.2.x
+  sed -i 's/^\#\s*OS.EnableRDMA=.*/OS.EnableRDMA=y/' /etc/waagent.conf
+  systemctl enable hv_kvp_daemon.service
+
+  ## WALinuxAgent 2.0.x
+  #sed -i 's/OS.UpdateRdmaDriver=n/OS.UpdateRdmaDriver=y/' /etc/waagent.conf
+  #sed -i 's/OS.CheckRdmaDriver=n/OS.CheckRdmaDriver=y/' /etc/waagent.conf
 
 # Need to increase max locked memory
 echo -e "\n# Increase max locked memory for RDMA workloads" >> /etc/security/limits.conf
@@ -159,7 +166,7 @@ NM_CONTROLLED=no
 EOF
 
 # Install Intel MPI
-MPI="l_mpi-rt_p_5.1.3.181"
+MPI="l_mpi-rt_2017.2.174"
 CFG="IntelMPI-silent.cfg"
 curl -so /tmp/${MPI}.tgz http://192.168.40.171/azure/${MPI}.tgz  ## Internal link to MPI package
 curl -so /tmp/${CFG} https://raw.githubusercontent.com/szarkos/AzureBuildCentOS/master/config/azure/${CFG}
