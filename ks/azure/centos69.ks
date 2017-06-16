@@ -78,6 +78,7 @@ sudo
 python-pyasn1
 parted
 WALinuxAgent
+azure-repo-svc
 -dracut-config-rescue
 
 %end
@@ -141,6 +142,9 @@ chkconfig cups off
 #rpm -i /root/WALinuxAgent-2.1.3-1.noarch.rpm
 #rm -f /root/WALinuxAgent-2.1.3-1.noarch.rpm
 #chkconfig waagent on
+
+# turn on azure-repo-svc to detech whether Azure Cloud or Azure Stack on boot time
+chkconfig azure-repo-svc on
 
 # Deprovision and prepare for Azure
 /usr/sbin/waagent -force -deprovision
