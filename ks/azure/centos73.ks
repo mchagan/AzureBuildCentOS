@@ -45,7 +45,7 @@ part / --fstype="xfs" --size=1 --grow --asprimary
 bootloader --location=mbr --timeout=1
 
 # Add OpenLogic repo
-repo --name=openlogic --baseurl=http://olcentgbl.trafficmanager.net/openlogic/7/openlogic/x86_64/
+repo --name=openlogic --baseurl=http://olcentscus.cloudapp.net/openlogic/7/openlogic/x86_64/
 
 # Firewall configuration
 firewall --disabled
