@@ -26,7 +26,7 @@ repo --name="CentOS-Updates" --baseurl=http://olcentgbl.trafficmanager.net/cento
 rootpw --plaintext "to_be_disabled"
 
 # System services
-services --enabled="sshd,waagent,ntpd,dnsmasq,hypervkvpd"
+services --enabled="azure-repo-svc,sshd,waagent,ntpd,dnsmasq,hypervkvpd"
 
 # System timezone
 timezone Etc/UTC --isUtc
