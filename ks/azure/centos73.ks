@@ -156,6 +156,10 @@ rm -f /lib/udev/rules.d/75-persistent-net-generator.rules /etc/udev/rules.d/70-p
 # Disable some unneeded services by default (administrators can re-enable if desired)
 systemctl disable abrtd
 
+# enable and start azure-repo-svc
+systemctl enable azure-repo-svc
+systemctl enable azure-repo-svc.path
+
 # Deprovision and prepare for Azure
 /usr/sbin/waagent -force -deprovision
 rm -f /etc/resolv.conf 2>/dev/null # workaround old agent bug
