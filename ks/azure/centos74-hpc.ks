@@ -1,4 +1,4 @@
-# Kickstart for provisioning a RHEL 7.4 Azure HPC VM
+# Kickstart for provisioning a CentOS 7.4 Azure HPC VM
 
 # System authorization information
 auth --enableshadow --passalgo=sha512
